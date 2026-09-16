@@ -18,3 +18,4 @@ AGENT.md
 *.pem
 *.key
 *.crt
+/claude_desktop_config.example.json
