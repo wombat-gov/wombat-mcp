@@ -43,7 +43,7 @@ sequenceDiagram
 - **IdP-agnostic**: The bridge does not talk to Keycloak/Entra/Okta directly. It trusts tokens issued by the upstream `wafpass-server`, which handles the actual OIDC/SAML flows.
 - **OIDC pass-through**: The AI client inherits the user's WAF++ SSO context by presenting the same Bearer token.
 - **Least privilege**: `tools/list` is filtered by the authenticated user's role. Unauthorized tools are invisible.
-- **Context propagation**: Every backend call forwards the original `Authorization: Bearer` header so WAFpass can apply endpoint- and row-level authorization.
+- **Context propagation**: Every backend call forwards the original `Authorization: Bearer` header so WAFpass can apply endpoint- and row-level authorization. When a caller sends `X-Mandant-Context` on the SSE connection, it is forwarded as well so holding/group admins can narrow into one mandate.
 - **Strict validation**: Tool arguments are validated against Pydantic models generated from the WAFpass OpenAPI spec.
 
 ## Quick start

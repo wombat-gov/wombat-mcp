@@ -186,13 +186,12 @@ class MCPServerBridge:
         async with httpx.AsyncClient(
             base_url=settings.wafpass_api_base_url, timeout=60
         ) as client:
+            headers = ctx.headers()
+            headers["Content-Type"] = "application/json"
             request = client.build_request(
                 method=op.method,
                 url=url,
-                headers={
-                    "Authorization": f"Bearer {access_token}",
-                    "Content-Type": "application/json",
-                },
+                headers=headers,
                 json=body if body is not None else None,
                 params=query,
             )

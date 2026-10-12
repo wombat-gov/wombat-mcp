@@ -41,10 +41,15 @@ class UserContext:
     is_active: bool
     # Raw token so we can proxy it to the backend on tool calls.
     access_token: str
+    # Optional multi-mandant context switcher (same as X-Mandant-Context).
+    mandant_context: str | None = None
 
     def headers(self) -> dict[str, str]:
         """Headers to forward to the WAFpass backend."""
-        return {"Authorization": f"Bearer {self.access_token}"}
+        headers: dict[str, str] = {"Authorization": f"Bearer {self.access_token}"}
+        if self.mandant_context:
+            headers["X-Mandant-Context"] = self.mandant_context
+        return headers
 
     def role_sufficient(self, minimum: str) -> bool:
         """Return True if this user's role meets *minimum* privilege."""
@@ -152,7 +157,9 @@ async def refresh_access_token(refresh_token: str) -> tuple[str, str]:
     return new_access, new_refresh
 
 
-async def validate_token(token: str) -> UserContext:
+async def validate_token(
+    token: str, mandant_context: str | None = None
+) -> UserContext:
     """Validate a Bearer token and return the user context."""
     if settings.wafpass_token_mode == "introspection":
         data = await _introspect_token(token)
@@ -171,6 +178,7 @@ async def validate_token(token: str) -> UserContext:
         role=data.get("role", "clevel"),
         is_active=data.get("is_active", True),
         access_token=token,
+        mandant_context=mandant_context,
     )
 
 
@@ -184,7 +192,8 @@ async def require_user_context(request: Request) -> UserContext:
             headers={"WWW-Authenticate": "Bearer"},
         )
     token = auth_header[7:].strip()
-    ctx = await validate_token(token)
+    mandant_context = request.headers.get("X-Mandant-Context")
+    ctx = await validate_token(token, mandant_context=mandant_context)
     if not ctx.is_active:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, detail="User account is inactive."
