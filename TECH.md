@@ -1,14 +1,14 @@
-# wafpass-mcp — Technical Reference
+# wombat-mcp — Technical Reference
 
-This document covers the internal architecture, design decisions, and contribution guidance for the WAF++ MCP bridge. For user-facing documentation see `README.md`.
+This document covers the internal architecture, design decisions, and contribution guidance for the Wombat MCP bridge. For user-facing documentation see `README.md`.
 
-The bridge is part of the WAF++ tool chain:
+The bridge is part of the Wombat tool chain:
 
 | Component | Package | Responsibility |
 |-----------|---------|----------------|
-| `../pass` | `wafpass-core` | IaC compliance engine that produces scan results |
-| `../wafpass-server` | `wafpass-server` | FastAPI + PostgreSQL API that stores results and issues JWTs |
-| `../wafpass-mcp` | `wafpass-mcp` | **This package** — exposes the WAFpass REST API as MCP tools over HTTP/SSE |
+| `../pass` | `wombat-core` | IaC compliance engine that produces scan results |
+| `../wafpass-server` | `wombat-server` | FastAPI + PostgreSQL API that stores results and issues JWTs |
+| `../wafpass-mcp` | `wombat-mcp` | **This package** — exposes the Wombat REST API as MCP tools over HTTP/SSE |
 
 ---
 
@@ -16,7 +16,7 @@ The bridge is part of the WAF++ tool chain:
 
 ```
 wafpass-mcp/
-├── wafpass_mcp/
+├── wombat_mcp/
 │   ├── __init__.py          # Package marker
 │   ├── main.py              # FastAPI app, /health, /sse, /messages/ endpoints
 │   ├── config.py            # pydantic-settings (env var parsing)
@@ -25,7 +25,7 @@ wafpass-mcp/
 │   ├── mcp_server.py        # MCPServerBridge: SDK Server, on_list_tools, on_call_tool
 │   ├── explain.py           # Backend error + skipped finding explanation layer
 │   ├── settings_store.py    # Per-user config file persistence
-│   ├── configure.py         # Interactive `wafpass-mcp-configure` helper
+│   ├── configure.py         # Interactive `wombat-mcp-configure` helper
 │   ├── stdio_server.py      # stdio MCP server entry point
 │   └── token_manager.py     # Access token refresh scheduling
 ├── tests/                   # pytest suite
@@ -47,17 +47,17 @@ wafpass-mcp/
 
 ```
 AI Client (MCP host)
-    │  GET /sse  Authorization: Bearer <WAF++ token>
+    │  GET /sse  Authorization: Bearer <Wombat token>
     ▼
 main.py:sse_endpoint
     │  await require_user_context(request)
     ▼
 auth.py
-    ├─ introspection mode  → GET /auth/me on wafpass-server
+    ├─ introspection mode  → GET /auth/me on wombat-server
     └─ jwt_secret mode     → local HS256 verify + claim extraction
     │  returns UserContext {id, username, role, is_active}
     ▼
-request.scope["wafpass_user_context"] = ctx
+request.scope["wombat_user_context"] = ctx
     │  MCP SSE session established
     ▼
 MCP "tools/list" request
@@ -73,9 +73,9 @@ mcp_server.py:_on_call_tool
     ├─ validates arguments against generated Pydantic model
     ├─ enforces required role
     ├─ extracts path params, query params, body
-    └─ proxies to wafpass-server with the same Authorization header
+    └─ proxies to wombat-server with the same Authorization header
     ▼
-wafpass-server applies endpoint + row-level authorization
+wombat-server applies endpoint + row-level authorization
     │  returns JSON
     ▼
 MCP TextContent / is_error result returned to AI Client
@@ -85,12 +85,12 @@ MCP TextContent / is_error result returned to AI Client
 
 ## Token validation (`auth.py`)
 
-Two modes are supported; the active mode is chosen by `WAFPASS_TOKEN_MODE`.
+Two modes are supported; the active mode is chosen by `WOMBAT_TOKEN_MODE`.
 
 | Mode | Mechanism | Use case |
 |------|-----------|----------|
-| `introspection` | `GET <WAFPASS_API_BASE_URL>/auth/me` with `Authorization: Bearer <token>` | Recommended. IdP-agnostic, works with secret rotation, instant revocation. |
-| `jwt_secret` | Local HS256 verification using `WAFPASS_JWT_SECRET` | Faster, but requires sharing the secret and does not detect revocation. |
+| `introspection` | `GET <WOMBAT_API_BASE_URL>/auth/me` with `Authorization: Bearer <token>` | Recommended. IdP-agnostic, works with secret rotation, instant revocation. |
+| `jwt_secret` | Local HS256 verification using `WOMBAT_JWT_SECRET` | Faster, but requires sharing the secret and does not detect revocation. |
 
 Both modes produce a `UserContext` with `id`, `username`, `role`, and `is_active`. Unauthenticated requests raise `HTTPException(401)` before the MCP session starts.
 
@@ -106,7 +106,7 @@ ROLE_HIERARCHY = ["clevel", "ciso", "architect", "engineer", "admin"]
 
 ## OpenAPI mapping (`openapi_mapper.py`)
 
-At startup `MCPServerBridge.load_openapi()` fetches `<WAFPASS_API_BASE_URL>/openapi.json` and builds an `OperationMeta` for every safe operation.
+At startup `MCPServerBridge.load_openapi()` fetches `<WOMBAT_API_BASE_URL>/openapi.json` and builds an `OperationMeta` for every safe operation.
 
 ### Tool naming
 
@@ -144,7 +144,7 @@ Auth callbacks and login endpoints are excluded by `SKIP_OPERATIONS` so the AI c
 
 ```python
 self.server = Server(
-    "wafpass-mcp",
+    "wombat-mcp",
     on_list_tools=self._on_list_tools,
     on_call_tool=self._on_call_tool,
 )
@@ -163,7 +163,7 @@ self.server = Server(
 - Validates arguments with the operation's Pydantic request model.
 - Builds the URL by substituting path parameters.
 - Extracts query parameters for `GET`/`DELETE` and body fields for `POST`/`PUT`/`PATCH`.
-- Forwards the call to `wafpass-server` with the original `Authorization: Bearer` header.
+- Forwards the call to `wombat-server` with the original `Authorization: Bearer` header.
 - Returns `CallToolResult` with `TextContent(...)` or `isError=True` on failure.
 
 ---
@@ -190,29 +190,29 @@ The `lifespan` context manager:
 
 ## Configuration (`config.py` + `settings_store.py`)
 
-Runtime settings are loaded once at startup via `pydantic-settings` from environment variables. In stdio mode, `wafpass-mcp-stdio` first loads a stored user config written by `wafpass-mcp-configure`; environment variables then override those stored values. This lets desktop users run the bridge without editing JSON or copying tokens.
+Runtime settings are loaded once at startup via `pydantic-settings` from environment variables. In stdio mode, `wombat-mcp-stdio` first loads a stored user config written by `wombat-mcp-configure`; environment variables then override those stored values. This lets desktop users run the bridge without editing JSON or copying tokens.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `WAFPASS_API_BASE_URL` | `http://localhost:8000` | Upstream WAFpass API |
-| `WAFPASS_TOKEN_MODE` | `introspection` | `introspection` or `jwt_secret` |
-| `WAFPASS_JWT_SECRET` | *(empty)* | Required for `jwt_secret` mode |
-| `WAFPASS_ACCESS_TOKEN` | *(empty)* | WAF++ access token (stdio mode) |
-| `WAFPASS_REFRESH_TOKEN` | *(empty)* | Opaque refresh token (stdio mode) |
-| `WAFPASS_REFRESH_THRESHOLD_SECONDS` | `300` | Refresh window before token expiry |
+| `WOMBAT_API_BASE_URL` | `http://localhost:8000` | Upstream Wombat API |
+| `WOMBAT_TOKEN_MODE` | `introspection` | `introspection` or `jwt_secret` |
+| `WOMBAT_JWT_SECRET` | *(empty)* | Required for `jwt_secret` mode |
+| `WOMBAT_ACCESS_TOKEN` | *(empty)* | Wombat access token (stdio mode) |
+| `WOMBAT_REFRESH_TOKEN` | *(empty)* | Opaque refresh token (stdio mode) |
+| `WOMBAT_REFRESH_THRESHOLD_SECONDS` | `300` | Refresh window before token expiry |
 | `MCP_HOST` | `0.0.0.0` | Bind host |
 | `MCP_PORT` | `3001` | Bind port |
 | `LOG_LEVEL` | `INFO` | Logging level |
 
-`WAFPASS_TOKEN_MODE` is validated to be one of the two allowed strings.
+`WOMBAT_TOKEN_MODE` is validated to be one of the two allowed strings.
 
-The stored config is written to `platformdirs.user_config_dir("wafpass-mcp")` and created with `0o600` permissions where supported.
+The stored config is written to `platformdirs.user_config_dir("wombat-mcp")` and created with `0o600` permissions where supported.
 
 ## stdio server (`stdio_server.py`)
 
-`wafpass-mcp-stdio` is the recommended entry point for Claude Desktop and other local MCP hosts. It resolves credentials in this order:
+`wombat-mcp-stdio` is the recommended entry point for Claude Desktop and other local MCP hosts. It resolves credentials in this order:
 
-1. `WAFPASS_ACCESS_TOKEN` / `WAFPASS_REFRESH_TOKEN` environment variables.
+1. `WOMBAT_ACCESS_TOKEN` / `WOMBAT_REFRESH_TOKEN` environment variables.
 2. The stored user config file, if present.
 
 If an access token is found but rejected at startup, the stdio server attempts to refresh it using the refresh token. After successful startup, `TokenManager` schedules refreshes before the token expires.
@@ -226,10 +226,10 @@ Logging is directed to stderr so stdout remains reserved for MCP protocol messag
 A `Dockerfile` is included so the bridge can be built locally from the monorepo root `docker-compose.yml`:
 
 ```
-docker compose up -d wafpass-mcp
+docker compose up -d wombat-mcp
 ```
 
-The compose service sets `WAFPASS_API_BASE_URL=http://wafpass-server:8000` and `WAFPASS_TOKEN_MODE=introspection` by default.
+The compose service sets `WOMBAT_API_BASE_URL=http://wombat-server:8000` and `WOMBAT_TOKEN_MODE=introspection` by default.
 
 > **Release artifact:** The project is released as a Python package on PyPI. The `Dockerfile` is only for local development convenience; the release workflow does not build or publish a container image.
 
@@ -241,17 +241,17 @@ The compose service sets `WAFPASS_API_BASE_URL=http://wafpass-server:8000` and `
 pip install -e ".[dev]"
 
 # Lint
-ruff check wafpass_mcp tests scripts
+ruff check wombat_mcp tests scripts
 
 # Type check
-mypy wafpass_mcp tests scripts
+mypy wombat_mcp tests scripts
 
 # Test
 pytest tests -q
 
-# Manual end-to-end check against a running wafpass-server
-python scripts/mcp_list_tools.py <WAF++_TOKEN>
-python scripts/mcp_call_tool_test.py <WAF++_TOKEN>
+# Manual end-to-end check against a running wombat-server
+python scripts/mcp_list_tools.py <Wombat_TOKEN>
+python scripts/mcp_call_tool_test.py <Wombat_TOKEN>
 ```
 
 ---

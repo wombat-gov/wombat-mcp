@@ -1,6 +1,6 @@
 """MCP server implementation with dynamic tool registration.
 
-The server is created once, tools are registered at startup from the WAFpass
+The server is created once, tools are registered at startup from the Wombat
 OpenAPI spec, and the authenticated user context is passed through the ASGI
 scope so it is available in every tool handler.
 """
@@ -23,17 +23,17 @@ from mcp.types import (
     Tool,
 )
 
-from wafpass_mcp.auth import UserContext
-from wafpass_mcp.config import settings
-from wafpass_mcp.explain import explain_response
-from wafpass_mcp.openapi_mapper import OpenAPIMapper, OperationMeta
-from wafpass_mcp.token_manager import TokenManager
+from wombat_mcp.auth import UserContext
+from wombat_mcp.config import settings
+from wombat_mcp.explain import explain_response
+from wombat_mcp.openapi_mapper import OpenAPIMapper, OperationMeta
+from wombat_mcp.token_manager import TokenManager
 
 logger = structlog.get_logger()
 
 
 class MCPServerBridge:
-    """Wraps an MCP Server and dynamically exposes WAFpass endpoints as tools.
+    """Wraps an MCP Server and dynamically exposes Wombat endpoints as tools.
 
     Supports both HTTP/SSE (the default, used by the FastAPI app) and stdio
     (used when the bridge is run as a local command, e.g. from Claude Desktop).
@@ -50,7 +50,7 @@ class MCPServerBridge:
         self._stdio_user_context: UserContext | None = None
         self._token_manager = token_manager
         self.server = MCPServer(
-            "wafpass-mcp",
+            "wombat-mcp",
             on_list_tools=self._on_list_tools,
             on_call_tool=self._on_call_tool,
         )
@@ -65,9 +65,9 @@ class MCPServerBridge:
         self._stdio_user_context = ctx
 
     async def load_openapi(self) -> None:
-        """Fetch WAFpass OpenAPI and build MCP tool definitions + validators."""
+        """Fetch Wombat OpenAPI and build MCP tool definitions + validators."""
         async with httpx.AsyncClient(
-            base_url=settings.wafpass_api_base_url, timeout=15
+            base_url=settings.wombat_api_base_url, timeout=15
         ) as client:
             resp = await client.get("/openapi.json")
             resp.raise_for_status()
@@ -152,7 +152,7 @@ class MCPServerBridge:
         """Extract the validated user context.
 
         For stdio sessions the context is set directly on the bridge. For HTTP/SSE
-        sessions the FastAPI endpoints store it under ``wafpass_user_context`` in
+        sessions the FastAPI endpoints store it under ``wombat_user_context`` in
         the ASGI scope before handing the streams to the MCP runner.
         """
         if self._stdio_user_context is not None:
@@ -164,7 +164,7 @@ class MCPServerBridge:
         scope = getattr(request, "scope", None)
         if not isinstance(scope, dict):
             return None
-        return scope.get("wafpass_user_context")
+        return scope.get("wombat_user_context")
 
     async def _invoke_backend(
         self,
@@ -172,7 +172,7 @@ class MCPServerBridge:
         arguments: dict[str, Any],
         ctx: UserContext,
     ) -> dict[str, Any]:
-        """Forward the validated tool call to the WAFpass backend."""
+        """Forward the validated tool call to the Wombat backend."""
         url = op.build_url(arguments)
         body = op.extract_body(arguments)
         query = op.extract_query(arguments)
@@ -184,7 +184,7 @@ class MCPServerBridge:
         )
 
         async with httpx.AsyncClient(
-            base_url=settings.wafpass_api_base_url, timeout=60
+            base_url=settings.wombat_api_base_url, timeout=60
         ) as client:
             headers = ctx.headers()
             headers["Content-Type"] = "application/json"

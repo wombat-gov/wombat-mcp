@@ -9,20 +9,20 @@ import respx
 from fastapi.testclient import TestClient
 from httpx import Response
 
-from wafpass_mcp.auth import UserContext
-from wafpass_mcp.main import app
+from wombat_mcp.auth import UserContext
+from wombat_mcp.main import app
 
 pytestmark = pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
 
 
 @pytest.fixture
 def client(httpx_mock: Any) -> TestClient:
-    """Provide a TestClient with the WAFpass OpenAPI endpoint mocked."""
+    """Provide a TestClient with the Wombat OpenAPI endpoint mocked."""
     httpx_mock.add_response(
         url="http://localhost:8000/openapi.json",
         json={
             "openapi": "3.1.0",
-            "info": {"title": "WAFpass", "version": "1.0"},
+            "info": {"title": "Wombat", "version": "1.0"},
             "paths": {
                 "/runs": {
                     "get": {
@@ -65,7 +65,7 @@ def _make_token_claims(role: str = "admin") -> dict[str, Any]:
 @pytest.mark.anyio
 async def test_call_tool_explains_backend_error() -> None:
     """A backend HTTP error is translated by the explain layer."""
-    from wafpass_mcp.mcp_server import MCPServerBridge
+    from wombat_mcp.mcp_server import MCPServerBridge
 
     bridge = MCPServerBridge(sse=False)
     bridge.mapper = None
@@ -112,7 +112,7 @@ async def test_call_tool_explains_backend_error() -> None:
 @pytest.mark.anyio
 async def test_call_tool_passthrough_for_non_error() -> None:
     """A successful backend response is returned unchanged."""
-    from wafpass_mcp.mcp_server import MCPServerBridge
+    from wombat_mcp.mcp_server import MCPServerBridge
 
     bridge = MCPServerBridge(sse=False)
     bridge.mapper = None

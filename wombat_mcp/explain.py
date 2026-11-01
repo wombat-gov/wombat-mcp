@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
-# Reason templates emitted by wafpass-core classify_findings / build_fix_plan.
+# Reason templates emitted by wombat-core classify_findings / build_fix_plan.
 _SKIPPED_REASONS: dict[str, str] = {
     "cannot auto-generate a meaningful non-empty value": (
         "The control has no registered default for this attribute, so the "
@@ -50,8 +50,8 @@ def explain_backend_error(status_code: int, detail: Any) -> str:
     """Turn a backend HTTP failure into a short, actionable message."""
     if status_code == 401:
         return (
-            "The WAFpass API rejected the access token (401). "
-            "Log in again through the WAFpass dashboard to refresh your token."
+            "The Wombat API rejected the access token (401). "
+            "Log in again through the Wombat dashboard to refresh your token."
         )
     if status_code == 403:
         return (
@@ -61,7 +61,7 @@ def explain_backend_error(status_code: int, detail: Any) -> str:
         )
     if status_code == 404:
         return (
-            "The requested resource was not found on the WAFpass server (404). "
+            "The requested resource was not found on the Wombat server (404). "
             "Check the ID and try again."
         )
     if status_code == 422:
@@ -71,15 +71,15 @@ def explain_backend_error(status_code: int, detail: Any) -> str:
         )
     if status_code == 503:
         return (
-            f"A required WAFpass service is unavailable (503). "
+            f"A required Wombat service is unavailable (503). "
             f"Server said: {detail}"
         )
     if status_code >= 500:
         return (
-            f"The WAFpass server encountered an error ({status_code}). "
+            f"The Wombat server encountered an error ({status_code}). "
             "Please try again later."
         )
-    return f"WAFpass API returned {status_code}: {detail}"
+    return f"Wombat API returned {status_code}: {detail}"
 
 
 def explain_skipped_finding(skipped: dict[str, Any]) -> str:

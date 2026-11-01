@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from wafpass_mcp.auth import UserContext, role_sufficient
+from wombat_mcp.auth import UserContext, role_sufficient
 
 
 def test_role_sufficient_hierarchy() -> None:

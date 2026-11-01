@@ -2,8 +2,8 @@
 
 This runs the same dynamic MCP server as the HTTP/SSE bridge, but communicates
 over stdin/stdout. By default, credentials are read from the user config file
-written by ``wafpass-mcp-configure``. Environment variables override the
-stored config, so power users and CI can still supply ``WAFPASS_ACCESS_TOKEN``
+written by ``wombat-mcp-configure``. Environment variables override the
+stored config, so power users and CI can still supply ``WOMBAT_ACCESS_TOKEN``
 directly.
 
 Because stdout is reserved for the MCP protocol, all logging is directed to
@@ -21,11 +21,11 @@ from datetime import timedelta
 import structlog
 from mcp.server.stdio import stdio_server
 
-from wafpass_mcp.auth import UserContext, refresh_access_token, validate_token
-from wafpass_mcp.config import settings
-from wafpass_mcp.mcp_server import MCPServerBridge
-from wafpass_mcp.settings_store import load_user_config
-from wafpass_mcp.token_manager import TokenManager
+from wombat_mcp.auth import UserContext, refresh_access_token, validate_token
+from wombat_mcp.config import settings
+from wombat_mcp.mcp_server import MCPServerBridge
+from wombat_mcp.settings_store import load_user_config
+from wombat_mcp.token_manager import TokenManager
 
 logger = structlog.get_logger()
 
@@ -55,19 +55,19 @@ def _configure_logging() -> None:
 
 def _resolve_stdio_credentials() -> tuple[str, str]:
     """Return the access/refresh token pair from env or the user's config file."""
-    token = os.environ.get("WAFPASS_ACCESS_TOKEN", "")
-    refresh_token = os.environ.get("WAFPASS_REFRESH_TOKEN", "")
+    token = os.environ.get("WOMBAT_ACCESS_TOKEN", "")
+    refresh_token = os.environ.get("WOMBAT_REFRESH_TOKEN", "")
     if token:
         return token, refresh_token
 
     user_config = load_user_config()
     if user_config is not None:
         user_config.apply_to_env()
-        settings.wafpass_api_base_url = user_config.api_base_url
-        settings.wafpass_token_mode = user_config.token_mode
+        settings.wombat_api_base_url = user_config.api_base_url
+        settings.wombat_token_mode = user_config.token_mode
         settings.log_level = user_config.log_level
-        token = os.environ.get("WAFPASS_ACCESS_TOKEN", "")
-        refresh_token = os.environ.get("WAFPASS_REFRESH_TOKEN", "")
+        token = os.environ.get("WOMBAT_ACCESS_TOKEN", "")
+        refresh_token = os.environ.get("WOMBAT_REFRESH_TOKEN", "")
     return token, refresh_token
 
 
@@ -79,8 +79,8 @@ async def main() -> None:
     if not token:
         logger.error("missing_access_token")
         raise SystemExit(
-            "No WAF++ access token found. Either set WAFPASS_ACCESS_TOKEN, "
-            "or run `wafpass-mcp-configure` to log in and store credentials."
+            "No Wombat access token found. Either set WOMBAT_ACCESS_TOKEN, "
+            "or run `wombat-mcp-configure` to log in and store credentials."
         )
 
     logger.info("validating_token")
@@ -91,8 +91,8 @@ async def main() -> None:
             logger.exception("token_validation_failed_no_refresh_token")
             raise SystemExit(
                 "Access token is invalid or expired and no "
-                "WAFPASS_REFRESH_TOKEN is set. Please log in again through "
-                "the WAFpass server and update Claude Desktop's environment."
+                "WOMBAT_REFRESH_TOKEN is set. Please log in again through "
+                "the Wombat server and update Claude Desktop's environment."
             ) from exc
         logger.info("access_token_rejected_attempting_refresh")
         try:
@@ -101,7 +101,7 @@ async def main() -> None:
             logger.exception("refresh_token_failed")
             raise SystemExit(
                 "Access token and refresh token are both invalid or expired. "
-                "Please log in again through the WAFpass server and update "
+                "Please log in again through the Wombat server and update "
                 "Claude Desktop's environment."
             ) from exc
         ctx = await validate_token(token)
@@ -115,14 +115,14 @@ async def main() -> None:
         token_manager = TokenManager(
             access_token=token,
             refresh_token=refresh_token,
-            threshold=timedelta(seconds=settings.wafpass_refresh_threshold_seconds),
+            threshold=timedelta(seconds=settings.wombat_refresh_threshold_seconds),
         )
         logger.info(
             "token_refresh_enabled",
-            threshold_seconds=settings.wafpass_refresh_threshold_seconds,
+            threshold_seconds=settings.wombat_refresh_threshold_seconds,
         )
     else:
-        logger.warning("token_refresh_disabled", reason="WAFPASS_REFRESH_TOKEN not set")
+        logger.warning("token_refresh_disabled", reason="WOMBAT_REFRESH_TOKEN not set")
 
     bridge = MCPServerBridge(sse=False, token_manager=token_manager)
     await bridge.load_openapi()
@@ -146,6 +146,14 @@ async def main() -> None:
 
 def _entrypoint() -> None:
     asyncio.run(main())
+
+
+def _legacy_entrypoint() -> None:
+    """Deprecated ``wafpass-mcp-stdio`` console-script alias."""
+    from wombat_mcp.compat import warn_legacy
+
+    warn_legacy("The 'wafpass-mcp-stdio' command", replacement="'wombat-mcp-stdio'")
+    _entrypoint()
 
 
 if __name__ == "__main__":

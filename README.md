@@ -1,8 +1,8 @@
-# WAF++ MCP Bridge
+# Wombat MCP Bridge
 
-<img src="https://waf2p.dev/images/WAFpp_upscaled_1000.png" width="120" alt="WAF++ logo" align="right">
+<img src="https://www.wombat-gov.dev/images/WAFpp_upscaled_1000.png" width="120" alt="Wombat logo" align="right">
 
-A secure [Model Context Protocol](https://modelcontextprotocol.io) server that exposes WAFpass (WAF++ backend) REST endpoints as MCP tools for AI assistants.
+A secure [Model Context Protocol](https://modelcontextprotocol.io) server that exposes Wombat (Wombat backend) REST endpoints as MCP tools for AI assistants.
 
 ## Architecture
 
@@ -10,17 +10,17 @@ A secure [Model Context Protocol](https://modelcontextprotocol.io) server that e
 sequenceDiagram
     actor User
     participant AI_Client as AI Client (MCP Host)
-    participant MCP as wafpass-mcp (this bridge)
+    participant MCP as wombat-mcp (this bridge)
     participant IdP as Keycloak / IdP
-    participant API as wafpass-server
+    participant API as wombat-server
 
     User->>IdP: Authenticate (OIDC/SAML)
     IdP-->>User: IdP tokens
-    User->>API: Exchange IdP tokens for WAF++ JWT
-    API-->>User: WAF++ access token
+    User->>API: Exchange IdP tokens for Wombat JWT
+    API-->>User: Wombat access token
 
     User->>AI_Client: Start AI session
-    AI_Client->>MCP: SSE /sse with Authorization: Bearer <WAF++ token>
+    AI_Client->>MCP: SSE /sse with Authorization: Bearer <Wombat token>
     MCP->>API: Introspect token (GET /auth/me) or verify HS256 locally
     API-->>MCP: User profile {id, username, role, is_active}
 
@@ -40,11 +40,11 @@ sequenceDiagram
 
 ## Security model
 
-- **IdP-agnostic**: The bridge does not talk to Keycloak/Entra/Okta directly. It trusts tokens issued by the upstream `wafpass-server`, which handles the actual OIDC/SAML flows.
-- **OIDC pass-through**: The AI client inherits the user's WAF++ SSO context by presenting the same Bearer token.
+- **IdP-agnostic**: The bridge does not talk to Keycloak/Entra/Okta directly. It trusts tokens issued by the upstream `wombat-server`, which handles the actual OIDC/SAML flows.
+- **OIDC pass-through**: The AI client inherits the user's Wombat SSO context by presenting the same Bearer token.
 - **Least privilege**: `tools/list` is filtered by the authenticated user's role. Unauthorized tools are invisible.
-- **Context propagation**: Every backend call forwards the original `Authorization: Bearer` header so WAFpass can apply endpoint- and row-level authorization. When a caller sends `X-Mandant-Context` on the SSE connection, it is forwarded as well so holding/group admins can narrow into one mandate.
-- **Strict validation**: Tool arguments are validated against Pydantic models generated from the WAFpass OpenAPI spec.
+- **Context propagation**: Every backend call forwards the original `Authorization: Bearer` header so Wombat can apply endpoint- and row-level authorization. When a caller sends `X-Mandant-Context` on the SSE connection, it is forwarded as well so holding/group admins can narrow into one mandate.
+- **Strict validation**: Tool arguments are validated against Pydantic models generated from the Wombat OpenAPI spec.
 
 ## Quick start
 
@@ -56,29 +56,29 @@ pip install -e ".[dev]"
 
 # 2. Configure
 cp .env.example .env
-# Edit .env to point at your WAFpass backend and choose token validation mode.
+# Edit .env to point at your Wombat backend and choose token validation mode.
 
 # 3. Start the bridge
-python -m wafpass_mcp.main
+python -m wombat_mcp.main
 ```
 
 The SSE endpoint is available at `http://localhost:3001/sse`.
 
 ### Docker Compose (local development)
 
-For local development the bridge can also be built from its `Dockerfile` and started alongside the rest of the WAF++ stack. From the repository root:
+For local development the bridge can also be built from its `Dockerfile` and started alongside the rest of the Wombat stack. From the repository root:
 
 ```bash
-docker compose up -d wafpass-mcp
+docker compose up -d wombat-mcp
 ```
 
-The service builds from `./wafpass-mcp`, depends on `wafpass-server`, and exposes port `3001`. Override `WAFPASS_TOKEN_MODE` or `WAFPASS_JWT_SECRET` via `.env` if you are not using the default introspection mode.
+The service builds from `./wafpass-mcp`, depends on `wombat-server`, and exposes port `3001`. Override `WOMBAT_TOKEN_MODE` or `WOMBAT_JWT_SECRET` via `.env` if you are not using the default introspection mode.
 
-> **Release artifact:** `wafpass-mcp` is released as a Python package on PyPI. The `Dockerfile` exists only for local convenience in `docker-compose.yml`; the release workflow does not publish a Docker image.
+> **Release artifact:** `wombat-mcp` is released as a Python package on PyPI. The `Dockerfile` exists only for local convenience in `docker-compose.yml`; the release workflow does not publish a Docker image.
 
 ## First-time setup
 
-This guide covers installing the bridge, creating a WAF++ token, and connecting it to Claude Desktop. For most local use the recommended transport is **stdio**; an HTTPS-based HTTP/SSE alternative is documented below.
+This guide covers installing the bridge, creating a Wombat token, and connecting it to Claude Desktop. For most local use the recommended transport is **stdio**; an HTTPS-based HTTP/SSE alternative is documented below.
 
 ### 1. Install the bridge
 
@@ -92,20 +92,20 @@ pip install -e ".[dev]"
 
 This creates three console scripts in `.venv/bin`:
 
-- `wafpass-mcp` — runs the HTTP/SSE bridge.
-- `wafpass-mcp-stdio` — runs the stdio bridge for Claude Desktop.
-- `wafpass-mcp-configure` — interactive login that stores credentials in the user's config directory.
+- `wombat-mcp` — runs the HTTP/SSE bridge.
+- `wombat-mcp-stdio` — runs the stdio bridge for Claude Desktop.
+- `wombat-mcp-configure` — interactive login that stores credentials in the user's config directory.
 
-### 2. Start the upstream WAFpass server
+### 2. Start the upstream Wombat server
 
-The bridge needs a running `wafpass-server` on `http://localhost:8000`. Follow the setup in `../wafpass-server/README.md`.
+The bridge needs a running `wombat-server` on `http://localhost:8000`. Follow the setup in `../wafpass-server/README.md`.
 
 For local development, seed a bootstrap admin in `../wafpass-server/.env`:
 
 ```bash
-WAFPASS_ADMIN_USERNAME=admin
-WAFPASS_ADMIN_PASSWORD=changeme123
-WAFPASS_ADMIN_ROLE=admin
+WOMBAT_ADMIN_USERNAME=admin
+WOMBAT_ADMIN_PASSWORD=changeme123
+WOMBAT_ADMIN_ROLE=admin
 ```
 
 The server creates this user automatically on first startup.
@@ -115,14 +115,14 @@ The server creates this user automatically on first startup.
 Run the interactive helper:
 
 ```bash
-wafpass-mcp-configure
+wombat-mcp-configure
 ```
 
-It prompts for the WAFpass API URL, username, and password, logs in, and stores the access token, refresh token, and URL in the user's config directory. The file is created with restrictive permissions (`0o600`) where the OS supports it.
+It prompts for the Wombat API URL, username, and password, logs in, and stores the access token, refresh token, and URL in the user's config directory. The file is created with restrictive permissions (`0o600`) where the OS supports it.
 
-After `wafpass-mcp-configure` succeeds, `wafpass-mcp-stdio` can start without any environment variables. It reads the stored config by default and refreshes the access token automatically before it expires.
+After `wombat-mcp-configure` succeeds, `wombat-mcp-stdio` can start without any environment variables. It reads the stored config by default and refreshes the access token automatically before it expires.
 
-> Access tokens expire after `WAFPASS_JWT_EXPIRE_MINUTES` (default 60). Keeping the refresh token in the stored config lets the stdio bridge refresh the access token automatically.
+> Access tokens expire after `WOMBAT_JWT_EXPIRE_MINUTES` (default 60). Keeping the refresh token in the stored config lets the stdio bridge refresh the access token automatically.
 
 #### Alternative: manual token creation
 
@@ -146,13 +146,13 @@ If you don't have `jq`, inspect the raw JSON response and copy the two token val
 
 The best way to use the bridge locally with Claude Desktop is to run it as a stdio command. This avoids HTTPS certificates, open ports, and TLS termination entirely.
 
-Because credentials are now stored by `wafpass-mcp-configure`, the Claude Desktop config only needs the command path:
+Because credentials are now stored by `wombat-mcp-configure`, the Claude Desktop config only needs the command path:
 
 ```json
 {
   "mcpServers": {
-    "wafpass": {
-      "command": "/Users/lewandos/git/waf++/wafpass-mcp/.venv/bin/wafpass-mcp-stdio"
+    "wombat": {
+      "command": "/Users/lewandos/git/waf++/wafpass-mcp/.venv/bin/wombat-mcp-stdio"
     }
   }
 }
@@ -165,23 +165,23 @@ Place the file in Claude Desktop's MCP config location and restart Claude Deskto
 
 The exact path can be opened from Claude Desktop via **Settings → Developer → Edit Config**.
 
-After restarting, open a new chat and look for the WAFpass tools in the tool picker (or ask Claude to list them). You should see tools like `list_runs_runs_get`, `get_run_runs__run_id__get`, etc., filtered by the token's role.
+After restarting, open a new chat and look for the Wombat tools in the tool picker (or ask Claude to list them). You should see tools like `list_runs_runs_get`, `get_run_runs__run_id__get`, etc., filtered by the token's role.
 
 #### Overriding the stored config with environment variables
 
-Environment variables take precedence over the stored config. This is useful for testing, CI, or switching backends without re-running `wafpass-mcp-configure`:
+Environment variables take precedence over the stored config. This is useful for testing, CI, or switching backends without re-running `wombat-mcp-configure`:
 
 ```json
 {
   "mcpServers": {
-    "wafpass": {
-      "command": "/Users/lewandos/git/waf++/wafpass-mcp/.venv/bin/wafpass-mcp-stdio",
+    "wombat": {
+      "command": "/Users/lewandos/git/waf++/wafpass-mcp/.venv/bin/wombat-mcp-stdio",
       "env": {
-        "WAFPASS_ACCESS_TOKEN": "<WAF++_TOKEN_HERE>",
-        "WAFPASS_REFRESH_TOKEN": "<WAF++_REFRESH_TOKEN_HERE>",
-        "WAFPASS_API_BASE_URL": "http://localhost:8000",
-        "WAFPASS_TOKEN_MODE": "introspection",
-        "WAFPASS_REFRESH_THRESHOLD_SECONDS": "300"
+        "WOMBAT_ACCESS_TOKEN": "<Wombat_TOKEN_HERE>",
+        "WOMBAT_REFRESH_TOKEN": "<Wombat_REFRESH_TOKEN_HERE>",
+        "WOMBAT_API_BASE_URL": "http://localhost:8000",
+        "WOMBAT_TOKEN_MODE": "introspection",
+        "WOMBAT_REFRESH_THRESHOLD_SECONDS": "300"
       }
     }
   }
@@ -235,7 +235,7 @@ mkcert localhost 127.0.0.1 ::1
 #### Run the bridge with TLS
 
 ```bash
-uvicorn wafpass_mcp.main:app \
+uvicorn wombat_mcp.main:app \
   --host 0.0.0.0 \
   --port 3001 \
   --ssl-keyfile ./localhost-key.pem \
@@ -246,8 +246,8 @@ The SSE endpoint is now `https://localhost:3001/sse`. The certificate files are 
 
 ### Notes for stdio mode
 
-- In stdio mode, credentials are read from the stored config file by default. Environment variables override the stored values, so `WAFPASS_ACCESS_TOKEN` is only required when no config has been saved.
-- `WAFPASS_REFRESH_TOKEN` is optional but strongly recommended so the bridge can refresh the access token before it expires.
+- In stdio mode, credentials are read from the stored config file by default. Environment variables override the stored values, so `WOMBAT_ACCESS_TOKEN` is only required when no config has been saved.
+- `WOMBAT_REFRESH_TOKEN` is optional but strongly recommended so the bridge can refresh the access token before it expires.
 - The bridge logs to **stderr**; stdout is reserved for the MCP protocol.
 - Token refresh only happens in stdio mode. HTTP/SSE clients must provide a fresh access token with every SSE connection.
 
@@ -262,14 +262,14 @@ If you prefer to keep using the HTTP/SSE transport (for remote AI hosts, browser
 1. Install ngrok and authenticate (`ngrok authtoken <token>`).
 2. Start the bridge normally:
    ```bash
-   python -m wafpass_mcp.main
+   python -m wombat_mcp.main
    ```
 3. In another terminal expose it:
    ```bash
    ngrok http 3001
    ```
 4. Copy the generated `https://` URL (e.g. `https://xxxx.ngrok-free.app`).
-5. Configure your MCP client to use that URL for the SSE endpoint, and keep sending `Authorization: Bearer <WAF++ token>`:
+5. Configure your MCP client to use that URL for the SSE endpoint, and keep sending `Authorization: Bearer <Wombat token>`:
    ```
    https://xxxx.ngrok-free.app/sse
    ```
@@ -291,7 +291,7 @@ If you prefer to keep using the HTTP/SSE transport (for remote AI hosts, browser
    ```
 3. Start uvicorn directly with the certificate files:
    ```bash
-   uvicorn wafpass_mcp.main:app \
+   uvicorn wombat_mcp.main:app \
      --host 0.0.0.0 \
      --port 3001 \
      --ssl-keyfile ./localhost-key.pem \
@@ -303,7 +303,7 @@ If you prefer to keep using the HTTP/SSE transport (for remote AI hosts, browser
    ```
 5. Keep the key and certificate files out of git (they are already ignored by the default `.gitignore` patterns for `*.pem`).
 
-> The built-in `python -m wafpass_mcp.main` entry point does not expose uvicorn's TLS flags. Use `uvicorn` directly, or set `MCP_PORT` / other settings via environment variables as usual.
+> The built-in `python -m wombat_mcp.main` entry point does not expose uvicorn's TLS flags. Use `uvicorn` directly, or set `MCP_PORT` / other settings via environment variables as usual.
 
 ### Option C: Caddy reverse proxy (automatic local HTTPS)
 
@@ -317,7 +317,7 @@ If you prefer to keep using the HTTP/SSE transport (for remote AI hosts, browser
    ```
 2. Start the bridge on its default port:
    ```bash
-   python -m wafpass_mcp.main
+   python -m wombat_mcp.main
    ```
 3. Run Caddy in another terminal:
    ```bash
@@ -346,48 +346,48 @@ Once you have an HTTPS endpoint, add it to an MCP host that supports HTTP/SSE (e
 ```json
 {
   "mcpServers": {
-    "wafpass": {
+    "wombat": {
       "url": "https://localhost:3001/sse",
       "headers": {
-        "Authorization": "Bearer <WAF++_TOKEN>"
+        "Authorization": "Bearer <Wombat_TOKEN>"
       }
     }
   }
 }
 ```
 
-> Replace `<WAF++_TOKEN>` with a real token obtained from your WAFpass backend. Automatic refresh is only available in stdio mode; HTTP/SSE clients must provide a fresh token with every SSE connection.
+> Replace `<Wombat_TOKEN>` with a real token obtained from your Wombat backend. Automatic refresh is only available in stdio mode; HTTP/SSE clients must provide a fresh token with every SSE connection.
 
 ## Configuration
 
-Settings can come from two places. `wafpass-mcp-configure` writes them to the user's config directory; environment variables override the stored values.
+Settings can come from two places. `wombat-mcp-configure` writes them to the user's config directory; environment variables override the stored values.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `WAFPASS_API_BASE_URL` | `http://localhost:8000` | Upstream WAFpass API |
-| `WAFPASS_TOKEN_MODE` | `introspection` | `introspection` (call `/auth/me`) or `jwt_secret` (local HS256) |
-| `WAFPASS_JWT_SECRET` | *(empty)* | Required for `jwt_secret` mode; must match backend secret |
-| `WAFPASS_ACCESS_TOKEN` | *(empty)* | WAF++ token for stdio mode; optional if stored by `wafpass-mcp-configure` |
-| `WAFPASS_REFRESH_TOKEN` | *(empty)* | Opaque refresh token for automatic access-token refresh in stdio mode |
-| `WAFPASS_REFRESH_THRESHOLD_SECONDS` | `300` | Refresh the access token if it expires within this many seconds |
+| `WOMBAT_API_BASE_URL` | `http://localhost:8000` | Upstream Wombat API |
+| `WOMBAT_TOKEN_MODE` | `introspection` | `introspection` (call `/auth/me`) or `jwt_secret` (local HS256) |
+| `WOMBAT_JWT_SECRET` | *(empty)* | Required for `jwt_secret` mode; must match backend secret |
+| `WOMBAT_ACCESS_TOKEN` | *(empty)* | Wombat token for stdio mode; optional if stored by `wombat-mcp-configure` |
+| `WOMBAT_REFRESH_TOKEN` | *(empty)* | Opaque refresh token for automatic access-token refresh in stdio mode |
+| `WOMBAT_REFRESH_THRESHOLD_SECONDS` | `300` | Refresh the access token if it expires within this many seconds |
 | `MCP_HOST` | `0.0.0.0` | Bridge bind host (HTTP/SSE mode) |
 | `MCP_PORT` | `3001` | Bridge bind port (HTTP/SSE mode) |
 | `LOG_LEVEL` | `INFO` | Logging level |
 
 The stored config file location depends on the OS:
 
-- **macOS**: `~/Library/Application Support/wafpass-mcp/settings.json`
-- **Linux**: `~/.config/wafpass-mcp/settings.json`
-- **Windows**: `%APPDATA%\wafpass-mcp\settings.json`
+- **macOS**: `~/Library/Application Support/wombat-mcp/settings.json`
+- **Linux**: `~/.config/wombat-mcp/settings.json`
+- **Windows**: `%APPDATA%\wombat-mcp\settings.json`
 
 ## Token validation modes
 
-- **introspection** (recommended): The bridge calls `GET /auth/me` on WAFpass for every new SSE connection. This is IdP-agnostic, works with any backend secret rotation, and lets WAFpass revoke tokens instantly.
+- **introspection** (recommended): The bridge calls `GET /auth/me` on Wombat for every new SSE connection. This is IdP-agnostic, works with any backend secret rotation, and lets Wombat revoke tokens instantly.
 - **jwt_secret**: The bridge verifies the HS256 signature locally. Faster but requires sharing the secret and does not detect token revocation.
 
 ## Tool registration and role filtering
 
-At startup the bridge fetches `http://<WAFPASS_API_BASE_URL>/openapi.json` and converts each safe operation into an MCP tool:
+At startup the bridge fetches `http://<WOMBAT_API_BASE_URL>/openapi.json` and converts each safe operation into an MCP tool:
 
 - Tool names use the OpenAPI `operationId` when present (e.g. `list_runs_runs_get`, `get_run_runs__run_id__get`), otherwise a generated name like `get_health`.
 - Path parameters become required tool arguments.
@@ -426,16 +426,16 @@ Calling `list_runs_runs_get`:
 }
 ```
 
-The bridge proxies this to `GET /runs?limit=5` with the user's Bearer token. WAFpass applies group-based row filtering and returns only the runs the user may see.
+The bridge proxies this to `GET /runs?limit=5` with the user's Bearer token. Wombat applies group-based row filtering and returns only the runs the user may see.
 
-> Both the SSE `GET /sse` and every `POST /messages/` request must carry the same `Authorization: Bearer <WAF++ token>` header.
+> Both the SSE `GET /sse` and every `POST /messages/` request must carry the same `Authorization: Bearer <Wombat token>` header.
 
 ## Development
 
 ```bash
 pytest
-ruff check wafpass_mcp tests scripts
-mypy wafpass_mcp tests scripts
+ruff check wombat_mcp tests scripts
+mypy wombat_mcp tests scripts
 ```
 
 These same checks run in GitHub Actions:
@@ -449,20 +449,20 @@ These same checks run in GitHub Actions:
 
 ```bash
 # list all tools visible to the token's role
-python scripts/mcp_list_tools.py <WAF++_TOKEN>
+python scripts/mcp_list_tools.py <Wombat_TOKEN>
 
 # call one tool and print the backend response
-python scripts/mcp_call_tool_test.py <WAF++_TOKEN>
+python scripts/mcp_call_tool_test.py <Wombat_TOKEN>
 
 # minimal client that prints init + first 10 tools
-python scripts/mcp_client_test.py <WAF++_TOKEN>
+python scripts/mcp_client_test.py <Wombat_TOKEN>
 ```
 
 ## Deployment notes
 
 - Run behind a TLS-terminating reverse proxy in production.
-- Prefer `WAFPASS_TOKEN_MODE=introspection` so the bridge does not need to store the JWT secret.
-- Keep the bridge on a separate network path from the IdP; it only needs outbound access to WAFpass.
+- Prefer `WOMBAT_TOKEN_MODE=introspection` so the bridge does not need to store the JWT secret.
+- Keep the bridge on a separate network path from the IdP; it only needs outbound access to Wombat.
 
 ---
 

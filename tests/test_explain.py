@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from wafpass_mcp.explain import (
+from wombat_mcp.explain import (
     explain_backend_error,
     explain_classify_response,
     explain_response,

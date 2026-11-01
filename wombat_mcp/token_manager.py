@@ -4,7 +4,7 @@ In stdio mode the bridge runs as a child process of an MCP host such as Claude
 Desktop. The access token supplied at startup eventually expires, so this module
 uses a refresh token to obtain a new access token before the old one expires.
 
-The refresh token is rotated by the upstream WAFpass server: a successful
+The refresh token is rotated by the upstream Wombat server: a successful
 ``POST /auth/refresh`` returns both a new access token and a new refresh token.
 Both are stored only in memory.
 """
@@ -16,7 +16,7 @@ from datetime import UTC, datetime, timedelta
 
 import structlog
 
-from wafpass_mcp.auth import refresh_access_token, token_expiry
+from wombat_mcp.auth import refresh_access_token, token_expiry
 
 logger = structlog.get_logger()
 

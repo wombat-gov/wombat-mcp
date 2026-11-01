@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from wafpass_mcp.settings_store import (
+from wombat_mcp.settings_store import (
     UserConfig,
     config_file,
     load_user_config,
@@ -18,7 +18,7 @@ def temp_config_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     """Redirect the settings file into a temporary directory."""
     path = tmp_path / "settings.json"
     monkeypatch.setattr(
-        "wafpass_mcp.settings_store._CONFIG_FILE",
+        "wombat_mcp.settings_store._CONFIG_FILE",
         path,
     )
     return path
@@ -50,9 +50,9 @@ def test_load_missing_config_returns_none(temp_config_file: Path) -> None:
 def test_apply_to_env_sets_variables(
     temp_config_file: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.delenv("WAFPASS_API_BASE_URL", raising=False)
-    monkeypatch.delenv("WAFPASS_ACCESS_TOKEN", raising=False)
-    monkeypatch.delenv("WAFPASS_REFRESH_TOKEN", raising=False)
+    monkeypatch.delenv("WOMBAT_API_BASE_URL", raising=False)
+    monkeypatch.delenv("WOMBAT_ACCESS_TOKEN", raising=False)
+    monkeypatch.delenv("WOMBAT_REFRESH_TOKEN", raising=False)
 
     config = UserConfig(
         api_base_url="http://setenv:8000",
@@ -63,9 +63,9 @@ def test_apply_to_env_sets_variables(
 
     import os
 
-    assert os.environ["WAFPASS_API_BASE_URL"] == "http://setenv:8000"
-    assert os.environ["WAFPASS_ACCESS_TOKEN"] == "tok"
-    assert os.environ["WAFPASS_REFRESH_TOKEN"] == "reftok"
+    assert os.environ["WOMBAT_API_BASE_URL"] == "http://setenv:8000"
+    assert os.environ["WOMBAT_ACCESS_TOKEN"] == "tok"
+    assert os.environ["WOMBAT_REFRESH_TOKEN"] == "reftok"
 
 
 def test_config_file_path(temp_config_file: Path) -> None:

@@ -1,8 +1,8 @@
 """Interactive configuration helper for the stdio MCP server.
 
-Prompts the user for the WAFpass API URL, username, and password, logs in,
+Prompts the user for the Wombat API URL, username, and password, logs in,
 and stores the resulting tokens in the user's config directory. After this
-one-time setup, ``wafpass-mcp-stdio`` can run without environment variables.
+one-time setup, ``wombat-mcp-stdio`` can run without environment variables.
 """
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import sys
 
 import httpx
 
-from wafpass_mcp.settings_store import (
+from wombat_mcp.settings_store import (
     UserConfig,
     config_file,
     load_user_config,
@@ -29,13 +29,13 @@ def _prompt(prompt_text: str, default: str = "") -> str:
 
 def configure() -> None:
     """Interactively collect credentials and persist tokens."""
-    print("WAF++ MCP configuration")
+    print("Wombat MCP configuration")
     print()
 
     existing = load_user_config()
     default_url = existing.api_base_url if existing else "http://localhost:8000"
 
-    api_base_url = _prompt("WAFpass API base URL", default_url).rstrip("/")
+    api_base_url = _prompt("Wombat API base URL", default_url).rstrip("/")
     if not api_base_url:
         print("Error: API base URL is required.", file=sys.stderr)
         raise SystemExit(1)
@@ -102,8 +102,16 @@ def configure() -> None:
 
     print()
     print(f"Saved configuration to {config_file()}")
-    print("Run `wafpass-mcp-stdio` to start the MCP server.")
+    print("Run `wombat-mcp-stdio` to start the MCP server.")
 
 
 def _entrypoint() -> None:
     configure()
+
+
+def _legacy_entrypoint() -> None:
+    """Deprecated ``wafpass-mcp-configure`` console-script alias."""
+    from wombat_mcp.compat import warn_legacy
+
+    warn_legacy("The 'wafpass-mcp-configure' command", replacement="'wombat-mcp-configure'")
+    _entrypoint()

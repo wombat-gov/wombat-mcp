@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from wafpass_mcp.token_manager import TokenManager
+from wombat_mcp.token_manager import TokenManager
 
 pytestmark = pytest.mark.asyncio
 
@@ -55,7 +55,7 @@ async def test_token_not_refreshed_when_far_from_expiry(
 ) -> None:
     refresh = AsyncMock(return_value=("new-access", "new-refresh"))
     monkeypatch.setattr(
-        "wafpass_mcp.token_manager.refresh_access_token",
+        "wombat_mcp.token_manager.refresh_access_token",
         refresh,
     )
 
@@ -73,7 +73,7 @@ async def test_token_refreshed_near_expiry(
 ) -> None:
     refresh = AsyncMock(return_value=("new-access", "new-refresh"))
     monkeypatch.setattr(
-        "wafpass_mcp.token_manager.refresh_access_token",
+        "wombat_mcp.token_manager.refresh_access_token",
         refresh,
     )
 
@@ -89,7 +89,7 @@ async def test_token_refreshed_near_expiry(
 async def test_refresh_token_rotated(near_expiry_token: str, monkeypatch: Any) -> None:
     refresh = AsyncMock(return_value=("new-access", "new-refresh"))
     monkeypatch.setattr(
-        "wafpass_mcp.token_manager.refresh_access_token",
+        "wombat_mcp.token_manager.refresh_access_token",
         refresh,
     )
 
@@ -111,7 +111,7 @@ async def test_no_refresh_without_refresh_token(
 ) -> None:
     refresh = AsyncMock(return_value=("new-access", "new-refresh"))
     monkeypatch.setattr(
-        "wafpass_mcp.token_manager.refresh_access_token",
+        "wombat_mcp.token_manager.refresh_access_token",
         refresh,
     )
 
@@ -125,7 +125,7 @@ async def test_no_refresh_without_refresh_token(
 async def test_refresh_failure_raises(near_expiry_token: str, monkeypatch: Any) -> None:
     refresh = AsyncMock(side_effect=Exception("upstream rejected"))
     monkeypatch.setattr(
-        "wafpass_mcp.token_manager.refresh_access_token",
+        "wombat_mcp.token_manager.refresh_access_token",
         refresh,
     )
 
