@@ -27,7 +27,10 @@ def _jwt_with_exp(exp: datetime) -> str:
     payload = base64.urlsafe_b64encode(
         json.dumps({"exp": int(exp.timestamp()), "sub": "user-1"}).encode()
     ).rstrip(b"=")
-    return f"{header.decode()}.{payload.decode()}.dummy-signature"
+    # PyJWT >= 2.14 strictly base64-decodes the signature segment, so the
+    # placeholder must be valid base64url rather than an arbitrary word.
+    signature = base64.urlsafe_b64encode(b"dummy-signature").rstrip(b"=")
+    return f"{header.decode()}.{payload.decode()}.{signature.decode()}"
 
 
 @pytest.fixture
