@@ -186,7 +186,7 @@ class MCPServerBridge:
         async with httpx.AsyncClient(
             base_url=settings.wombat_api_base_url, timeout=60
         ) as client:
-            headers = ctx.headers()
+            headers = ctx.headers(access_token)
             headers["Content-Type"] = "application/json"
             request = client.build_request(
                 method=op.method,

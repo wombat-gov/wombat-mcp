@@ -113,5 +113,8 @@ def _legacy_entrypoint() -> None:
     """Deprecated ``wafpass-mcp-configure`` console-script alias."""
     from wombat_mcp.compat import warn_legacy
 
-    warn_legacy("The 'wafpass-mcp-configure' command", replacement="'wombat-mcp-configure'")
+    warn_legacy(
+        "The 'wafpass-mcp-configure' command",
+        replacement="'wombat-mcp-configure'",
+    )
     _entrypoint()

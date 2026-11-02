@@ -44,9 +44,14 @@ class UserContext:
     # Optional multi-mandant context switcher (same as X-Mandant-Context).
     mandant_context: str | None = None
 
-    def headers(self) -> dict[str, str]:
-        """Headers to forward to the Wombat backend."""
-        headers: dict[str, str] = {"Authorization": f"Bearer {self.access_token}"}
+    def headers(self, access_token: str | None = None) -> dict[str, str]:
+        """Headers to forward to the Wombat backend.
+
+        *access_token* overrides the session token when a stdio
+        :class:`TokenManager` has rotated it since the context was built.
+        """
+        token = access_token or self.access_token
+        headers: dict[str, str] = {"Authorization": f"Bearer {token}"}
         if self.mandant_context:
             headers["X-Mandant-Context"] = self.mandant_context
         return headers
