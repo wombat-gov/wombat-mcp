@@ -72,7 +72,7 @@ For local development the bridge can also be built from its `Dockerfile` and sta
 docker compose up -d wombat-mcp
 ```
 
-The service builds from `./wafpass-mcp`, depends on `wombat-server`, and exposes port `3001`. Override `WOMBAT_TOKEN_MODE` or `WOMBAT_JWT_SECRET` via `.env` if you are not using the default introspection mode.
+The service builds from `./wombat-mcp`, depends on `wombat-server`, and exposes port `3001`. Override `WOMBAT_TOKEN_MODE` or `WOMBAT_JWT_SECRET` via `.env` if you are not using the default introspection mode.
 
 > **Release artifact:** `wombat-mcp` is released as a Python package on PyPI. The `Dockerfile` exists only for local convenience in `docker-compose.yml`; the release workflow does not publish a Docker image.
 
@@ -83,8 +83,8 @@ This guide covers installing the bridge, creating a Wombat token, and connecting
 ### 1. Install the bridge
 
 ```bash
-git clone https://github.com/WAF2p/wafpass-mcp.git
-cd wafpass-mcp
+git clone https://github.com/wombat-gov/wombat-mcp.git
+cd wombat-mcp
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
@@ -98,9 +98,9 @@ This creates three console scripts in `.venv/bin`:
 
 ### 2. Start the upstream Wombat server
 
-The bridge needs a running `wombat-server` on `http://localhost:8000`. Follow the setup in `../wafpass-server/README.md`.
+The bridge needs a running `wombat-server` on `http://localhost:8000`. Follow the setup in `../wombat-server/README.md`.
 
-For local development, seed a bootstrap admin in `../wafpass-server/.env`:
+For local development, seed a bootstrap admin in `../wombat-server/.env`:
 
 ```bash
 WOMBAT_ADMIN_USERNAME=admin
