@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import warnings
+from collections.abc import MutableMapping
 from pathlib import Path
 
 ENV_PREFIX = "WOMBAT_"
@@ -30,7 +31,7 @@ def warn_legacy(what: str, *, replacement: str | None = None) -> None:
     )
 
 
-def _promote(mapping) -> None:  # noqa: ANN001 - os.environ-like mapping
+def _promote(mapping: MutableMapping[str, str]) -> None:
     for key in list(mapping):
         if not key.startswith(LEGACY_ENV_PREFIX):
             continue
