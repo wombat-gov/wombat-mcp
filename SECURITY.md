@@ -24,7 +24,7 @@ If you discover a security vulnerability in `wombat-mcp`, please report it priva
 
 Options:
 
-- Open a [GitHub Security Advisory](https://github.com/WAF2p/wafpass-mcp/security/advisories/new) if private vulnerability reporting is enabled for the repository.
+- Open a [GitHub Security Advisory](https://github.com/wombat-gov/wombat-mcp/security/advisories/new) if private vulnerability reporting is enabled for the repository.
 - Otherwise, send a direct message to one of the maintainers listed in `pyproject.toml` under `authors`.
 
 Please include:
@@ -51,9 +51,9 @@ The following are in scope for vulnerability reports:
 
 Out of scope:
 
-- The upstream `wombat-server` API (report in the `wafpass-server` repository)
+- The upstream `wombat-server` API (report in the `wombat-server` repository)
 - The `wombat-core` engine or `wombat` CLI (report in the `pass` repository)
-- The `wombat-dashboard` React UI (report in the `wafpass-dashboard` repository)
+- The `wombat-dashboard` React UI (report in the `wombat-dashboard` repository)
 - Generic dependency vulnerabilities unless exploitable through this bridge's own code
 
 ---

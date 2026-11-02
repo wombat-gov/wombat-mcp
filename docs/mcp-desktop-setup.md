@@ -9,8 +9,8 @@ This guide walks through installing the Wombat MCP bridge, logging in once with 
 ## 1. Install the bridge
 
 ```bash
-git clone https://github.com/WAF2p/wafpass-mcp.git
-cd wafpass-mcp
+git clone https://github.com/wombat-gov/wombat-mcp.git
+cd wombat-mcp
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
