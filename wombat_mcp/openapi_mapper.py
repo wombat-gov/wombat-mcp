@@ -1,4 +1,4 @@
-"""Convert a WAFpass OpenAPI specification into MCP tool definitions.
+"""Convert a Wombat OpenAPI specification into MCP tool definitions.
 
 The mapper is intentionally conservative: it only exposes endpoints that are
 safe for an AI assistant to call and that map cleanly to JSON arguments.
@@ -28,7 +28,7 @@ _OPENAPI_TYPES_TO_PYTHON: dict[str, type] = {
     "object": dict,
 }
 
-# Map known WAFpass endpoints to minimum required roles.
+# Map known Wombat endpoints to minimum required roles.
 # Mirrors the backend role matrix in wafpass-server/README.md.
 ROLE_MAP: dict[tuple[str, str], str] = {
     ("GET", "/runs"): "clevel",
@@ -132,7 +132,7 @@ def _display_title(summary: str, operation_id: str) -> str:
 def _category_from_tags(tags: list[str] | None) -> str | None:
     """Return a display category from OpenAPI operation tags.
 
-    The WAFpass spec tags each router consistently (e.g. ``runs``,
+    The Wombat spec tags each router consistently (e.g. ``runs``,
     ``controls``). We expose the first tag in ``tool.meta.category`` so
     clients can group related tools without overwriting the tool title.
     """
@@ -291,7 +291,7 @@ def _resolve_schema(
     resolved = _resolve_ref(spec, schema)
     if resolved is not schema:
         # Avoid infinite recursion on circular refs by replacing the ref with
-        # a shallow marker before recursing. This is safe for WAFpass specs
+        # a shallow marker before recursing. This is safe for Wombat specs
         # which do not contain circular schema definitions.
         schema = {**resolved}
 

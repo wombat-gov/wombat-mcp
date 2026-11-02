@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 from pytest_httpx import HTTPXMock
 
-from wafpass_mcp.configure import configure
-from wafpass_mcp.settings_store import load_user_config
+from wombat_mcp.configure import configure
+from wombat_mcp.settings_store import load_user_config
 
 
 @pytest.fixture
@@ -15,7 +15,7 @@ def temp_config_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     """Redirect the settings file into a temporary directory."""
     path = tmp_path / "settings.json"
     monkeypatch.setattr(
-        "wafpass_mcp.settings_store._CONFIG_FILE",
+        "wombat_mcp.settings_store._CONFIG_FILE",
         path,
     )
     return path
@@ -65,7 +65,7 @@ def test_configure_saves_tokens_after_successful_login(
 
     captured = capsys.readouterr()
     assert "Saved configuration" in captured.out
-    assert "wafpass-mcp-stdio" in captured.out
+    assert "wombat-mcp-stdio" in captured.out
 
 
 def test_configure_fails_on_bad_credentials(

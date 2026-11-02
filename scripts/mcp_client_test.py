@@ -1,4 +1,4 @@
-"""Minimal MCP client over SSE to verify the WAF++ bridge."""
+"""Minimal MCP client over SSE to verify the Wombat bridge."""
 
 from __future__ import annotations
 

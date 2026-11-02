@@ -3,15 +3,15 @@
 The bridge operates as an OIDC pass-through proxy:
 
 1. The AI client connects to the MCP SSE endpoint with an
-   ``Authorization: Bearer <wafpass-access-token>`` header.
+   ``Authorization: Bearer <wombat-access-token>`` header.
 2. The bridge validates that token either by introspecting the upstream
-   WAFpass API (GET /api/v1/auth/me) or by locally verifying its HS256 signature.
+   Wombat API (GET /api/v1/auth/me) or by locally verifying its HS256 signature.
 3. The extracted user context (id, username, role, active) is attached to the
    ASGI scope and reused for every downstream tool invocation.
 
 This keeps the bridge IdP-agnostic: Keycloak / Entra / Okta / etc. are handled
-entirely by the upstream WAFpass OIDC/SAML flows. The bridge only trusts tokens
-issued by WAFpass.
+entirely by the upstream Wombat OIDC/SAML flows. The bridge only trusts tokens
+issued by Wombat.
 """
 
 from __future__ import annotations
@@ -26,14 +26,14 @@ import jwt
 import structlog
 from fastapi import HTTPException, Request, status
 
-from wafpass_mcp.config import settings
+from wombat_mcp.config import settings
 
 logger = structlog.get_logger()
 
 
 @dataclass(frozen=True)
 class UserContext:
-    """Validated principal extracted from the WAFpass access token."""
+    """Validated principal extracted from the Wombat access token."""
 
     user_id: uuid.UUID
     username: str
@@ -41,10 +41,20 @@ class UserContext:
     is_active: bool
     # Raw token so we can proxy it to the backend on tool calls.
     access_token: str
+    # Optional multi-mandant context switcher (same as X-Mandant-Context).
+    mandant_context: str | None = None
 
-    def headers(self) -> dict[str, str]:
-        """Headers to forward to the WAFpass backend."""
-        return {"Authorization": f"Bearer {self.access_token}"}
+    def headers(self, access_token: str | None = None) -> dict[str, str]:
+        """Headers to forward to the Wombat backend.
+
+        *access_token* overrides the session token when a stdio
+        :class:`TokenManager` has rotated it since the context was built.
+        """
+        token = access_token or self.access_token
+        headers: dict[str, str] = {"Authorization": f"Bearer {token}"}
+        if self.mandant_context:
+            headers["X-Mandant-Context"] = self.mandant_context
+        return headers
 
     def role_sufficient(self, minimum: str) -> bool:
         """Return True if this user's role meets *minimum* privilege."""
@@ -64,9 +74,9 @@ def role_sufficient(role: str, minimum: str) -> bool:
 
 
 async def _introspect_token(token: str) -> dict[str, Any]:
-    """Validate token by calling WAFpass /api/v1/auth/me."""
+    """Validate token by calling Wombat /api/v1/auth/me."""
     async with httpx.AsyncClient(
-        base_url=settings.wafpass_api_base_url, timeout=10
+        base_url=settings.wombat_api_base_url, timeout=10
     ) as client:
         resp = await client.get(
             "/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
@@ -80,14 +90,14 @@ async def _introspect_token(token: str) -> dict[str, Any]:
 
 
 def _decode_local_token(token: str) -> dict[str, Any]:
-    """Validate an HS256 WAFpass token locally."""
-    if not settings.wafpass_jwt_secret:
+    """Validate an HS256 Wombat token locally."""
+    if not settings.wombat_jwt_secret:
         raise HTTPException(
             status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="WAFPASS_JWT_SECRET not configured for local JWT mode.",
+            detail="WOMBAT_JWT_SECRET not configured for local JWT mode.",
         )
     try:
-        payload = jwt.decode(token, settings.wafpass_jwt_secret, algorithms=["HS256"])
+        payload = jwt.decode(token, settings.wombat_jwt_secret, algorithms=["HS256"])
     except jwt.PyJWTError as exc:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, detail=f"Invalid token: {exc}"
@@ -122,7 +132,7 @@ async def refresh_access_token(refresh_token: str) -> tuple[str, str]:
     when the upstream server rejects the refresh token.
     """
     async with httpx.AsyncClient(
-        base_url=settings.wafpass_api_base_url, timeout=10
+        base_url=settings.wombat_api_base_url, timeout=10
     ) as client:
         resp = await client.post(
             "/api/v1/auth/refresh",
@@ -152,9 +162,11 @@ async def refresh_access_token(refresh_token: str) -> tuple[str, str]:
     return new_access, new_refresh
 
 
-async def validate_token(token: str) -> UserContext:
+async def validate_token(
+    token: str, mandant_context: str | None = None
+) -> UserContext:
     """Validate a Bearer token and return the user context."""
-    if settings.wafpass_token_mode == "introspection":
+    if settings.wombat_token_mode == "introspection":
         data = await _introspect_token(token)
     else:
         data = _decode_local_token(token)
@@ -171,6 +183,7 @@ async def validate_token(token: str) -> UserContext:
         role=data.get("role", "clevel"),
         is_active=data.get("is_active", True),
         access_token=token,
+        mandant_context=mandant_context,
     )
 
 
@@ -184,7 +197,8 @@ async def require_user_context(request: Request) -> UserContext:
             headers={"WWW-Authenticate": "Bearer"},
         )
     token = auth_header[7:].strip()
-    ctx = await validate_token(token)
+    mandant_context = request.headers.get("X-Mandant-Context")
+    ctx = await validate_token(token, mandant_context=mandant_context)
     if not ctx.is_active:
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, detail="User account is inactive."

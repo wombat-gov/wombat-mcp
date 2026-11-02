@@ -17,8 +17,11 @@ from typing import Any
 from platformdirs import user_config_dir
 from pydantic import BaseModel, Field, field_validator
 
-_CONFIG_DIR = Path(user_config_dir("wafpass-mcp", appauthor=False))
+from wombat_mcp.compat import legacy_config_dir, warn_legacy
+
+_CONFIG_DIR = Path(user_config_dir("wombat-mcp", appauthor=False))
 _CONFIG_FILE = _CONFIG_DIR / "settings.json"
+_LEGACY_CONFIG_FILE = legacy_config_dir() / "settings.json"
 
 
 class UserConfig(BaseModel):
@@ -44,11 +47,11 @@ class UserConfig(BaseModel):
     def apply_to_env(self) -> None:
         """Copy non-empty values into environment variables."""
         env_map: dict[str, str] = {
-            "WAFPASS_API_BASE_URL": self.api_base_url,
-            "WAFPASS_ACCESS_TOKEN": self.access_token,
-            "WAFPASS_REFRESH_TOKEN": self.refresh_token,
-            "WAFPASS_TOKEN_MODE": self.token_mode,
-            "WAFPASS_LOG_LEVEL": self.log_level,
+            "WOMBAT_API_BASE_URL": self.api_base_url,
+            "WOMBAT_ACCESS_TOKEN": self.access_token,
+            "WOMBAT_REFRESH_TOKEN": self.refresh_token,
+            "WOMBAT_TOKEN_MODE": self.token_mode,
+            "WOMBAT_LOG_LEVEL": self.log_level,
         }
         for env_name, value in env_map.items():
             if value:
@@ -66,11 +69,19 @@ def config_file() -> Path:
 
 
 def load_user_config() -> UserConfig | None:
-    """Load the user's persisted configuration, if it exists."""
-    if not _CONFIG_FILE.exists():
+    """Load the user's persisted configuration, if it exists.
+
+    Falls back to the deprecated WAFpass-era config file when the new one has
+    not been written yet.
+    """
+    path = _CONFIG_FILE
+    if not path.exists() and _LEGACY_CONFIG_FILE.exists():
+        warn_legacy(str(_LEGACY_CONFIG_FILE), replacement=str(_CONFIG_FILE))
+        path = _LEGACY_CONFIG_FILE
+    if not path.exists():
         return None
     try:
-        raw = json.loads(_CONFIG_FILE.read_text(encoding="utf-8"))
+        raw = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return None
     if not isinstance(raw, dict):

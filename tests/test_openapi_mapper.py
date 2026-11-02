@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
-from wafpass_mcp.openapi_mapper import OpenAPIMapper
+from wombat_mcp.openapi_mapper import OpenAPIMapper
 
 
 @pytest.fixture

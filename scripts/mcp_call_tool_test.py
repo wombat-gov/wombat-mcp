@@ -1,4 +1,4 @@
-"""Call a dynamically mapped WAFpass tool through the MCP bridge."""
+"""Call a dynamically mapped Wombat tool through the MCP bridge."""
 
 from __future__ import annotations
 

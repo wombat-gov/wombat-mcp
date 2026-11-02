@@ -1,0 +1,1 @@
+"""Wombat MCP bridge package."""
